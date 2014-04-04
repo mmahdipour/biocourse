@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+
+
+<style>
+body {
+  font: 11px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.dot {
+  stroke: none;
+  fill: rgba(0, 0, 0, 0.4);
+}
+
+.significant {
+  fill: rgba(255, 0, 0, 0.4);
+}
+
+.tooltip {
+  position: absolute;
+  max-width: 300px;
+  pointer-events: none;
+  color: white;
+  background-color: rgba(0, 0, 255, 0.7);
+  border-radius: 5px;
+  padding: 15px;
+  font-size: 12pt;
+  border: solid 5px blue;
+}
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+
+<script>
+var margin = {top: 20, right: 20, bottom: 30, left: 30},
+    width = 960 - margin.left - margin.right,
+    height = 960 - margin.top - margin.bottom -1;
+
+// setup x 
+var xValue = function(d) { return d.Log2ratio;}, // data -> value
+    xScale = d3.scale.linear().range([0, width]), // value -> display
+    xMap = function(d) { return xScale(xValue(d));}, // data -> display
+    xAxis = d3.svg.axis().scale(xScale).orient("bottom");
+
+// setup y
+var yValue = function(d) { return d.log10pvalue;}, // data -> value
+    yScale = d3.scale.linear().range([height,0]), // value -> display
+    yMap = function(d) { return yScale(yValue(d));}, // data -> display
+    yAxis = d3.svg.axis().scale(yScale).orient("left");
+
+
+var svg = d3.select("body").append("svg")
+	.attr("Log2ratio", width + margin.left + margin.right)
+	.attr("log10pvalue", height + margin.top + margin.bottom)
+	.append("g")
+	.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var tooltip = d3.select("body").append("div")
+	.attr("class", "tooltip")
+	.style("opacity", 0);
+
+d3.csv("ttest.csv", function(error, data) {
+	data.forEach(function(d) {
+	    d.Log2ratio = +d.Log2ratio;
+	    d.log10pvalue = +d.log10pvalue;
+	  });
+
+	var cValue = function(d) { return d.Manufacturer;}
+
+	xScale.domain([d3.min(data, xValue)-0.5, d3.max(data, xValue)]);
+	yScale.domain([d3.min(data, yValue), d3.max(data, yValue)]);
+
+
+	svg.append("g")
+	      .attr("class", "x axis")
+	      .attr("transform", "translate(0," + height + ")")
+	      .call(xAxis)
+	    .append("text")
+	      .attr("class", "label")
+	      .attr("x", width)
+	      .attr("y", -6)
+	      .style("text-anchor", "end")
+	      .text("Log2(fold-change)");
+
+	  // y-axis
+	  svg.append("g")
+	      .attr("class", "y axis")
+	      .call(yAxis)
+	    .append("text")
+	      .attr("class", "label")
+	      .attr("transform", "rotate(-90)")
+	      .attr("y", 6)
+	      .attr("dy", ".71em")
+	      .style("text-anchor", "end")
+	      .text("-Log10(P-value)");
+
+	  // draw dots
+	  svg.selectAll(".dot")
+	      .data(data)
+	    .enter().append("circle")
+	      .attr("class", "dot")
+		  .classed("significant", function(d, i) { return (d.Log2ratio >= 1 || d.Log2ratio <= -1) && d.log10pvalue >= 
+
+1.301 })
+	      .attr("r", 3.5)
+	      .attr("cx", xMap)
+	      .attr("cy", yMap) 
+	      .on("mouseover", function(d) {
+	          tooltip.transition()
+	               .duration(200)
+	               .style("opacity", .9);
+	          tooltip.html(d.ID + "<br/> (" + xValue(d) 
+		        + ", " + yValue(d) + ")")
+	               .style("left", (d3.event.pageX + 5) + "px")
+	               .style("top", (d3.event.pageY - 28) + "px");
+	      })
+	      .on("mouseout", function(d) {
+	          tooltip.transition()
+	               .duration(500)
+	               .style("opacity", 0);
+	      });
+
+});
+
+</script>
+</body>
+</html>
